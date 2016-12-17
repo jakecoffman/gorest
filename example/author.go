@@ -1,7 +1,7 @@
 package example
 
 import (
-	"github.wwt.com/coffmanj/gorest"
+	"github.com/jakecoffman/gorest"
 	"gopkg.in/mgo.v2/bson"
 )
 

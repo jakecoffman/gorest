@@ -5,8 +5,8 @@ import (
 	"gopkg.in/mgo.v2"
 	"log"
 	"github.com/gin-gonic/gin"
-	"github.wwt.com/coffmanj/gorest"
-	"github.wwt.com/coffmanj/gorest/example"
+	"github.com/jakecoffman/gorest"
+	"github.com/jakecoffman/gorest/example"
 )
 
 func main() {
