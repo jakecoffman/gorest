@@ -30,10 +30,10 @@ func main() {
 		ae := example.AuthorController {
 			C: db.Collection("author"),
 		}
-		authorsRoute.GET("/", ae.List)
+		authorsRoute.GET("", ae.List)
 		authorsRoute.GET("/:id", ae.Get)
 
-		authorsRoute.POST("/", ae.Create)
+		authorsRoute.POST("", ae.Create)
 		authorsRoute.PUT("/:id", ae.Update)
 		authorsRoute.DELETE("/:id", ae.Delete)
 	}
