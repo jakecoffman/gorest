@@ -3,17 +3,17 @@ package example
 import (
 	"context"
 	"fmt"
+
 	"github.com/gin-gonic/gin"
+	"github.com/jakecoffman/gorest"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"log"
 )
 
 type Author struct {
-	ID    primitive.ObjectID `bson:"_id"`
-	Name  string
-	Books []Book
+	ID    primitive.ObjectID `bson:"_id" json:"_id"`
+	Name  string             `json:"name"`
+	Books []Book             `json:"books"`
 }
 
 func (a *Author) Valid() error {
@@ -43,40 +43,7 @@ func (b Book) Valid() error {
 }
 
 type AuthorController struct {
-	C *mongo.Collection
-}
-
-func (r *AuthorController) List(ctx *gin.Context) {
-	cursor, err := r.C.Find(context.Background(), bson.M{})
-	if err != nil {
-		ctx.JSON(500, bson.M{"error": err})
-		return
-	}
-	results := []Author{}
-	for cursor.Next(context.Background()) {
-		var result Author
-		if err = cursor.Decode(&result); err != nil {
-			log.Println(err)
-			ctx.JSON(500, bson.M{"error": "Decoding"})
-			return
-		}
-		results = append(results, result)
-	}
-	ctx.JSON(200, results)
-}
-
-func (r *AuthorController) Get(ctx *gin.Context) {
-	id, err := primitive.ObjectIDFromHex(ctx.Param("id"))
-	if err != nil {
-		ctx.JSON(400, bson.M{"error": "invalid bson ID"})
-		return
-	}
-	var result Author
-	if err := r.C.FindOne(context.Background(), bson.M{"_id": id}).Decode(&result); err != nil {
-		ctx.JSON(404, bson.M{"error": err.Error()})
-		return
-	}
-	ctx.JSON(200, result)
+	*gorest.Controller
 }
 
 func (r *AuthorController) Create(ctx *gin.Context) {
@@ -98,17 +65,13 @@ func (r *AuthorController) Create(ctx *gin.Context) {
 }
 
 func (r *AuthorController) Update(ctx *gin.Context) {
-	id, err := primitive.ObjectIDFromHex(ctx.Param("id"))
-	if err != nil {
-		ctx.JSON(400, bson.M{"error": "invalid bson ID"})
-		return
-	}
+	id, _ := ctx.Get("id")
 	var resource Author
 	if err := ctx.BindJSON(&resource); err != nil {
 		ctx.JSON(422, bson.M{"error": err.Error()})
 		return
 	}
-	resource.ID = id
+	resource.ID = id.(primitive.ObjectID)
 	if resource.Valid() != nil {
 		ctx.JSON(400, bson.M{"error": "invalid resource: " + resource.Valid().Error()})
 		return
@@ -118,17 +81,4 @@ func (r *AuthorController) Update(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(200, resource)
-}
-
-func (r *AuthorController) Delete(ctx *gin.Context) {
-	id, err := primitive.ObjectIDFromHex(ctx.Param("id"))
-	if err != nil {
-		ctx.JSON(400, bson.M{"error": "invalid bson id"})
-		return
-	}
-	if _, err := r.C.DeleteOne(context.Background(), bson.M{"_id": id}); err != nil {
-		ctx.JSON(404, bson.M{"error": err.Error()})
-		return
-	}
-	ctx.JSON(204, nil)
 }

@@ -2,14 +2,16 @@ package main
 
 import (
 	"context"
+	"log"
+	"time"
+
 	"github.com/gin-gonic/gin"
+	"github.com/jakecoffman/gorest"
 	"github.com/jakecoffman/gorest/example"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
-	"time"
 )
 
 func main() {
@@ -27,15 +29,14 @@ func main() {
 	router := gin.Default()
 	authorsRoute := router.Group("/authors")
 	{
-		ae := example.AuthorController {
-			C: db.Collection("author"),
-		}
+		ae := example.AuthorController{}
+		ae.C = db.Collection("author")
 		authorsRoute.GET("", ae.List)
-		authorsRoute.GET("/:id", ae.Get)
+		authorsRoute.GET("/:id", gorest.ValidIdFilter, ae.Get)
 
 		authorsRoute.POST("", ae.Create)
-		authorsRoute.PUT("/:id", ae.Update)
-		authorsRoute.DELETE("/:id", ae.Delete)
+		authorsRoute.PUT("/:id", gorest.ValidIdFilter, ae.Update)
+		authorsRoute.DELETE("/:id", gorest.ValidIdFilter, ae.Delete)
 	}
 	if err = router.Run("localhost:9889"); err != nil {
 		log.Fatal(err)

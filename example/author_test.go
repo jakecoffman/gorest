@@ -4,18 +4,20 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	"github.com/jakecoffman/gorest/example"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/jakecoffman/gorest"
+	"github.com/jakecoffman/gorest/example"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const (
@@ -32,16 +34,35 @@ func beforeEach() (*mongo.Database, *example.AuthorController) {
 	if err = db.Drop(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-	return db, &example.AuthorController{db.Collection(collection)}
+	return db, &example.AuthorController{Controller: &gorest.Controller{db.Collection(collection)}}
+}
+
+func verify(expected interface{}, actual []byte) bool {
+	var a []map[string]interface{}
+	var b []map[string]interface{}
+
+	data, err := json.Marshal(expected)
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+
+	_ = json.Unmarshal(data, &a)
+	_ = json.Unmarshal(actual, &b)
+
+	if !reflect.DeepEqual(a, b) {
+		return false
+	}
+	return true
 }
 
 func TestAuthorController_List(t *testing.T) {
 	db, controller := beforeEach()
-	actual := []interface{}{
+	expected := []interface{}{
 		example.Author{ID: primitive.NewObjectID(), Name: "Alice"},
 		example.Author{ID: primitive.NewObjectID(), Name: "Bob"},
 	}
-	if _, err := db.Collection(collection).InsertMany(context.Background(), actual); err != nil {
+	if _, err := db.Collection(collection).InsertMany(context.Background(), expected); err != nil {
 		t.Fatal(err)
 	}
 
@@ -50,10 +71,8 @@ func TestAuthorController_List(t *testing.T) {
 	c, _ := gin.CreateTestContext(resp)
 	controller.List(c)
 
-	if data, err := json.Marshal(actual); err != nil {
-		t.Fatal(err)
-	} else if !reflect.DeepEqual(data, resp.Body.Bytes()) {
-		t.Error("Unexpected listing", string(resp.Body.Bytes()))
+	if !verify(expected, resp.Body.Bytes()) {
+		t.Error("Unexpected listing", expected, "!=", resp.Body.Bytes())
 	}
 }
 
@@ -96,28 +115,26 @@ func TestAuthorController_Create(t *testing.T) {
 
 func TestAuthorController_Get(t *testing.T) {
 	db, controller := beforeEach()
-	actual := example.Author{ID: primitive.NewObjectID(), Name: "Alice"}
-	if _, err := db.Collection(collection).InsertOne(context.Background(), actual); err != nil {
+	expected := example.Author{ID: primitive.NewObjectID(), Name: "Alice"}
+	if _, err := db.Collection(collection).InsertOne(context.Background(), expected); err != nil {
 		t.Fatal(err)
 	}
 
 	resp := httptest.NewRecorder()
 	gin.SetMode(gin.TestMode)
 	c, _ := gin.CreateTestContext(resp)
-	c.Params = gin.Params{{Key: "id", Value: actual.ID.Hex()}}
+	c.Set("id", expected.ID)
 	controller.Get(c)
 
-	if data, err := json.Marshal(actual); err != nil {
-		t.Fatal(err)
-	} else if !reflect.DeepEqual(data, resp.Body.Bytes()) {
-		t.Error("Unexpected listing", string(resp.Body.Bytes()))
+	if !verify(expected, resp.Body.Bytes()) {
+		t.Error("Unexpected listing", expected, "!=", resp.Body.Bytes())
 	}
 }
 
 func TestAuthorController_Update(t *testing.T) {
 	db, controller := beforeEach()
-	actual := example.Author{ID: primitive.NewObjectID(), Name: "Alice"}
-	if _, err := db.Collection(collection).InsertOne(context.Background(), actual); err != nil {
+	expected := example.Author{ID: primitive.NewObjectID(), Name: "Alice"}
+	if _, err := db.Collection(collection).InsertOne(context.Background(), expected); err != nil {
 		t.Fatal(err)
 	}
 
@@ -129,14 +146,13 @@ func TestAuthorController_Update(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.Params = gin.Params{{Key: "id", Value: actual.ID.Hex()}}
+	c.Set("id", expected.ID)
 	controller.Update(c)
 
-	actual.Name = "Bob"
-	if data, err := json.Marshal(actual); err != nil {
-		t.Fatal(err)
-	} else if !reflect.DeepEqual(data, resp.Body.Bytes()) {
-		t.Error("Unexpected listing", string(resp.Body.Bytes()))
+	expected.Name = "Bob"
+
+	if !verify(expected, resp.Body.Bytes()) {
+		t.Error("Unexpected listing", expected, "!=", resp.Body.Bytes())
 	}
 }
 
@@ -150,7 +166,7 @@ func TestAuthorController_Delete(t *testing.T) {
 	resp := httptest.NewRecorder()
 	gin.SetMode(gin.TestMode)
 	c, _ := gin.CreateTestContext(resp)
-	c.Params = gin.Params{{Key: "id", Value: actual.ID.Hex()}}
+	c.Set("id", actual.ID)
 	controller.Delete(c)
 
 	cur, err := db.Collection(collection).Find(context.Background(), bson.M{})
