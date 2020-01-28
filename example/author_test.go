@@ -71,13 +71,13 @@ func TestAuthorController_List(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp := httptest.NewRecorder()
+	resp := CreateTestResponseRecorder()
 	gin.SetMode(gin.TestMode)
 	c, _ := gin.CreateTestContext(resp)
 	controller.List(c)
 
 	if !verify(expected, resp.Body.Bytes()) {
-		t.Error("Unexpected listing", expected, "!=", resp.Body.Bytes())
+		t.Error("Unexpected listing", expected, "!=", string(resp.Body.Bytes()))
 	}
 }
 
@@ -184,5 +184,25 @@ func TestAuthorController_Delete(t *testing.T) {
 	}
 	if count != 0 {
 		t.Error("Not the right amount of results", count)
+	}
+}
+
+type TestResponseRecorder struct {
+	*httptest.ResponseRecorder
+	closeChannel chan bool
+}
+
+func (r *TestResponseRecorder) CloseNotify() <-chan bool {
+	return r.closeChannel
+}
+
+func (r *TestResponseRecorder) closeClient() {
+	r.closeChannel <- true
+}
+
+func CreateTestResponseRecorder() *TestResponseRecorder {
+	return &TestResponseRecorder{
+		httptest.NewRecorder(),
+		make(chan bool, 1),
 	}
 }

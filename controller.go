@@ -3,6 +3,7 @@ package gorest
 import (
 	"context"
 	"log"
+	"reflect"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -11,13 +12,14 @@ import (
 )
 
 type Controller struct {
-	C *mongo.Collection
-	New func() Resource
+	C       *mongo.Collection
+	New     func() Resource
 }
 
 type Resource interface {
 	SetID(id primitive.ObjectID)
 	Valid() error
+	Decode(cursor *mongo.Cursor) error
 }
 
 func (r *Controller) List(ctx *gin.Context) {
@@ -26,17 +28,17 @@ func (r *Controller) List(ctx *gin.Context) {
 		ctx.JSON(500, bson.M{"error": err})
 		return
 	}
-	results := []map[string]interface{}{}
+	results := reflect.New(reflect.SliceOf(reflect.TypeOf(r.New()))).Elem()
 	for cursor.Next(context.Background()) {
-		var result map[string]interface{}
-		if err = cursor.Decode(&result); err != nil {
+		result := r.New()
+		if err = result.Decode(cursor); err != nil {
 			log.Println(err)
-			ctx.JSON(500, bson.M{"error": "Decoding"})
+			ctx.JSON(500, bson.M{"error": "Decoding " + err.Error()})
 			return
 		}
-		results = append(results, result)
+		results = reflect.Append(results, reflect.ValueOf(result))
 	}
-	ctx.JSON(200, results)
+	ctx.JSON(200, results.Interface())
 }
 
 func (r *Controller) Get(ctx *gin.Context) {
