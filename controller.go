@@ -43,10 +43,15 @@ func (r *Controller) List(ctx *gin.Context) {
 
 func (r *Controller) Get(ctx *gin.Context) {
 	id, _ := ctx.Get("id")
-	var result map[string]interface{}
-	if err := r.C.FindOne(context.Background(), bson.M{"_id": id}).Decode(&result); err != nil {
+	result := r.New()
+	if cursor, err := r.C.Find(context.Background(), bson.M{"_id": id}); err != nil {
 		ctx.JSON(404, bson.M{"error": err.Error()})
 		return
+	} else {
+		if err = result.Decode(cursor); err != nil {
+			ctx.JSON(500, bson.M{"error": err.Error()})
+			return
+		}
 	}
 	ctx.JSON(200, result)
 }
