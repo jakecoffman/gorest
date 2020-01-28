@@ -25,8 +25,8 @@ func (a *Author) Valid() error {
 		return fmt.Errorf("author needs a `Name`")
 	}
 	for _, book := range a.Books {
-		if book.Valid() != nil {
-			return book.Valid()
+		if err := book.Valid(); err != nil {
+			return err
 		}
 	}
 	return nil

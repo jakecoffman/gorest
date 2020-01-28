@@ -29,8 +29,12 @@ func main() {
 	router := gin.Default()
 	authorsRoute := router.Group("/authors")
 	{
-		ae := example.AuthorController{Controller: &gorest.Controller{}}
-		ae.C = db.Collection("author")
+		ae := example.AuthorController{Controller: &gorest.Controller{
+			C: db.Collection("author"),
+			New: func() gorest.Resource {
+				return &example.Author{}
+			},
+		}}
 		authorsRoute.GET("", ae.List)
 		authorsRoute.GET("/:id", gorest.ValidIdFilter, ae.Get)
 
