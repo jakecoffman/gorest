@@ -29,7 +29,7 @@ func main() {
 	router := gin.Default()
 	authorsRoute := router.Group("/authors")
 	{
-		ae := example.AuthorController{}
+		ae := example.AuthorController{Controller: &gorest.Controller{}}
 		ae.C = db.Collection("author")
 		authorsRoute.GET("", ae.List)
 		authorsRoute.GET("/:id", gorest.ValidIdFilter, ae.Get)
@@ -38,6 +38,7 @@ func main() {
 		authorsRoute.PUT("/:id", gorest.ValidIdFilter, ae.Update)
 		authorsRoute.DELETE("/:id", gorest.ValidIdFilter, ae.Delete)
 	}
+	log.Println("http://127.0.0.1:9889")
 	if err = router.Run("localhost:9889"); err != nil {
 		log.Fatal(err)
 	}
