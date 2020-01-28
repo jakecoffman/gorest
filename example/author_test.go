@@ -34,12 +34,7 @@ func beforeEach() (*mongo.Database, *example.AuthorController) {
 	if err = db.Drop(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-	return db, &example.AuthorController{Controller: &gorest.Controller{
-		C: db.Collection(collection),
-		New: func() gorest.Resource {
-			return &example.Author{}
-		},
-	}}
+	return db, &example.AuthorController{Controller: gorest.NewController(db.Collection(collection), example.Author{})}
 }
 
 func verify(expected interface{}, actual []byte) bool {
@@ -184,6 +179,24 @@ func TestAuthorController_Delete(t *testing.T) {
 	}
 	if count != 0 {
 		t.Error("Not the right amount of results", count)
+	}
+}
+
+func TestAuthorController_DeleteNotFound(t *testing.T) {
+	db, controller := beforeEach()
+	actual := example.Author{ID: primitive.NewObjectID(), Name: "Alice"}
+	if _, err := db.Collection(collection).InsertOne(context.Background(), actual); err != nil {
+		t.Fatal(err)
+	}
+
+	resp := httptest.NewRecorder()
+	gin.SetMode(gin.TestMode)
+	c, _ := gin.CreateTestContext(resp)
+	c.Set("id", "123")
+	controller.Delete(c)
+
+	if resp.Code != 404 {
+		t.Error("Expected 404 got", resp.Code)
 	}
 }
 
