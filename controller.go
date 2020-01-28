@@ -28,6 +28,7 @@ func (r *Controller) List(ctx *gin.Context) {
 		ctx.JSON(500, bson.M{"error": err})
 		return
 	}
+	defer cursor.Close(context.Background())
 	results := reflect.New(reflect.SliceOf(reflect.TypeOf(r.New()))).Elem()
 	for cursor.Next(context.Background()) {
 		result := r.New()
@@ -48,6 +49,7 @@ func (r *Controller) Get(ctx *gin.Context) {
 		ctx.JSON(404, bson.M{"error": err.Error()})
 		return
 	} else {
+		defer cursor.Close(context.Background())
 		if err = result.Decode(cursor); err != nil {
 			ctx.JSON(500, bson.M{"error": err.Error()})
 			return
