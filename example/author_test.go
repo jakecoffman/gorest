@@ -34,7 +34,12 @@ func beforeEach() (*mongo.Database, *example.AuthorController) {
 	if err = db.Drop(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-	return db, &example.AuthorController{Controller: &gorest.Controller{db.Collection(collection)}}
+	return db, &example.AuthorController{Controller: &gorest.Controller{
+		C: db.Collection(collection),
+		New: func() gorest.Resource {
+			return &example.Author{}
+		},
+	}}
 }
 
 func verify(expected interface{}, actual []byte) bool {
