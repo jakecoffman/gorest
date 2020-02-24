@@ -43,7 +43,7 @@ func (r *Controller) List(ctx *gin.Context) {
 
 	cursor, err := r.C.Find(timeout, bson.M{}, options.Find().SetLimit(r.Limit))
 	if err != nil {
-		ctx.JSON(500, bson.M{"error": err})
+		ctx.JSON(500, bson.M{"error": err.Error()})
 		return
 	}
 	defer cursor.Close(timeout)
