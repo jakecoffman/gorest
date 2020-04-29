@@ -31,10 +31,14 @@ func NewController(collection *mongo.Collection, resource interface{}) *Controll
 	}
 }
 
+type Decoder interface {
+	Decode(val interface{}) error
+}
+
 type Resource interface {
 	SetID(id primitive.ObjectID)
 	Valid() error
-	Decode(cursor *mongo.Cursor) error
+	Decode(cursor Decoder) error
 }
 
 func (r *Controller) List(ctx *gin.Context) {
@@ -66,16 +70,11 @@ func (r *Controller) Get(ctx *gin.Context) {
 	defer cancel()
 
 	id, _ := ctx.Get("id")
+	singleResult := r.C.FindOne(timeout, bson.M{"_id": id})
 	result := r.New()
-	if cursor, err := r.C.Find(timeout, bson.M{"_id": id}); err != nil {
+	if err := result.Decode(singleResult); err != nil {
 		ctx.JSON(404, bson.M{"error": err.Error()})
 		return
-	} else {
-		defer cursor.Close(timeout)
-		if err = result.Decode(cursor); err != nil {
-			ctx.JSON(500, bson.M{"error": err.Error()})
-			return
-		}
 	}
 	ctx.JSON(200, result)
 }

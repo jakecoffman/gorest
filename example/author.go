@@ -5,7 +5,6 @@ import (
 
 	"github.com/jakecoffman/gorest"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Author struct {
@@ -18,7 +17,7 @@ func (a *Author) SetID(id primitive.ObjectID) {
 	a.ID = id
 }
 
-func (a *Author) Decode(cursor *mongo.Cursor) error {
+func (a *Author) Decode(cursor gorest.Decoder) error {
 	return cursor.Decode(a)
 }
 
